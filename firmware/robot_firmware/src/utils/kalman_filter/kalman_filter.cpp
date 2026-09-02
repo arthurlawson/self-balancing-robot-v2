@@ -4,9 +4,11 @@
 
     static inline float Sqr(float x) { return x * x; }
 
-    KalmanFilter::KalmanFilter(float dtSec) : _dtSec(dtSec)
-    {
+    KalmanFilter::KalmanFilter(float dtSec) 
+        : _dtSec(dtSec) {
+
         Reset();
+        
     }
 
     void KalmanFilter::Predict(const float gyroRollRateDeg)

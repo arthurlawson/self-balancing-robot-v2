@@ -1,6 +1,7 @@
 #include "drv8833.h"
 
-DRV8833::DRV8833(uint8_t in1, uint8_t in2, uint8_t in3, uint8_t in4) : _in1(in1), _in2(in2), _in3(in3), _in4(in4) {
+DRV8833::DRV8833(uint8_t in1, uint8_t in2, uint8_t in3, uint8_t in4) 
+    : _in1(in1), _in2(in2), _in3(in3), _in4(in4) {
     
     pinMode(_in1, OUTPUT);
     pinMode(_in2, OUTPUT);
@@ -9,7 +10,7 @@ DRV8833::DRV8833(uint8_t in1, uint8_t in2, uint8_t in3, uint8_t in4) : _in1(in1)
 
     analogWriteResolution(8);
     analogWriteFrequency(20000);
-
+    
 }
 
 void DRV8833::Drive(int16_t left, int16_t right) {
