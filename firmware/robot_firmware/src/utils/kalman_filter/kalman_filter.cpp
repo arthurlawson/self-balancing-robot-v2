@@ -8,7 +8,7 @@
         : _dtSec(dtSec) {
 
         Reset();
-        
+
     }
 
     void KalmanFilter::Predict(const float gyroRollRateDeg)
@@ -26,15 +26,10 @@
 
     void KalmanFilter::MeasurementTask(const float accelRollDeg) {
         if (!_isInitialized) {
-            if (fabs(accelRollDeg) <= ACTIVATION_ANGLE) {
-                _rollAngle = accelRollDeg;
-                _rollBias = 0.0f;
-                _isInitialized = true;
-            } else {
-                _rollAngle = 0.0f;
-                _rollBias = 0.0f;
-                return;
-            }
+            _rollAngle = accelRollDeg;
+            _rollBias = 0.0f;
+            _isInitialized = true;
+            return;
         }
 
         // Calculate the innovation (the error between the absolute accelerometer angle and the prediction)
