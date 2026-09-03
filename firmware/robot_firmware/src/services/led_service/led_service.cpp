@@ -40,9 +40,9 @@ void LedService::Update() {
                 _lastToggleTime = now;
             }
             break;
+        }
         default:
             break;
-        }
     }
 }
 
