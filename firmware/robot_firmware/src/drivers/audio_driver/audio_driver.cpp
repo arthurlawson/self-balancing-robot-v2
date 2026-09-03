@@ -1,12 +1,13 @@
 #include "audio_driver.h"
+#include "rom/gpio.h"
+#include "driver/gpio.h"
 
 AudioDriver::AudioDriver(uint8_t audioPin)
     : _audioPin(audioPin), _isPlaying(false), _lastPlayTime(0), _playbackStartTime(0), _lastSampleTimeMicros(0) {
 
-        // enforce low state first time
+        gpio_reset_pin((gpio_num_t)_audioPin);
         pinMode(_audioPin, OUTPUT);
         digitalWrite(_audioPin, LOW);
-
     }
 
 bool AudioDriver::Begin() {
@@ -18,16 +19,12 @@ bool AudioDriver::Begin() {
     _totalAudioFiles = CountAudioFiles();
     Serial.printf("Total audio files found: %d\n", _totalAudioFiles);
 
-    // Double enforce low state prior to register mounting
-    pinMode(_audioPin, OUTPUT);
-    digitalWrite(_audioPin, LOW);
-
     // 100kHz carrier frequency to prevent high pitch speaker noise.
     // 8-bit resolution for 8-bit WAV files.
     ledc_timer_config_t ledc_timer = {
         .speed_mode = LEDC_LOW_SPEED_MODE,
         .duty_resolution = LEDC_TIMER_8_BIT,
-        .timer_num = LEDC_TIMER_0,
+        .timer_num = SPEAKER_TIMER,
         .freq_hz = 100000,
         .clk_cfg = LEDC_AUTO_CLK
     };
@@ -36,17 +33,15 @@ bool AudioDriver::Begin() {
     ledc_channel_config_t ledc_channel = {
         .gpio_num = _audioPin,
         .speed_mode = LEDC_LOW_SPEED_MODE,
-        .channel = LEDC_CHANNEL_0,
+        .channel = SPEAKER_CH,
         .intr_type = LEDC_INTR_DISABLE,
-        .timer_sel = LEDC_TIMER_0,
+        .timer_sel = SPEAKER_TIMER,
         .duty = 0,
         .hpoint = 0
     };
     ledc_channel_config(&ledc_channel);
 
-    // Triple enforce low state post register mounting
-    pinMode(_audioPin, OUTPUT);
-    digitalWrite(_audioPin, LOW);
+    StopPlayback();
 
     Serial.println("AudioDriver initialized successfully.");
     return true;
@@ -103,6 +98,18 @@ void AudioDriver::StartPlayback(const char *filepath) {
         _audioFile.seek(44, SeekSet);
     }
 
+    // Re-bind the pin to the LEDC hardware timer only when audio needs to actively play out the speaker
+    ledc_channel_config_t ledc_channel = {
+        .gpio_num = _audioPin,
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .channel = SPEAKER_CH,
+        .intr_type = LEDC_INTR_DISABLE,
+        .timer_sel = SPEAKER_TIMER,
+        .duty = 0,
+        .hpoint = 0
+    };
+    ledc_channel_config(&ledc_channel);
+
     _isPlaying = true;
     _playbackStartTime = millis();
     _lastSampleTimeMicros = micros();
@@ -124,8 +131,8 @@ void AudioDriver::Update() {
 
         // Feed the sample to the LEDC channel for playback. 
         // The LEDC peripheral auto handles the PWM output based on the set duty cycle.
-        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, wavSample);
-        ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+        ledc_set_duty(LEDC_LOW_SPEED_MODE, SPEAKER_CH, wavSample);
+        ledc_update_duty(LEDC_LOW_SPEED_MODE, SPEAKER_CH);
 
         _lastSampleTimeMicros = nowMicros;
     }
@@ -137,11 +144,8 @@ void AudioDriver::StopPlayback() {
         _audioFile.close();
     }
 
-    // Reset the LEDC channel to 0 duty cycle to prevent thermal loading on the 1/4W resistors.
-    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
-    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
-
-    // Ground the pin
+    ledc_stop(LEDC_LOW_SPEED_MODE, SPEAKER_CH, 0);
+    gpio_reset_pin((gpio_num_t)_audioPin);
     pinMode(_audioPin, OUTPUT);
     digitalWrite(_audioPin, LOW);
 

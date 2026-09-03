@@ -37,4 +37,7 @@
         static constexpr uint32_t SAMPLE_DELAY_MICROS = 91; // 11025 Hz Sample Rate
         static constexpr uint32_t MAX_PLAY_DURATION_MILLIS = 3000; // Max playtime of 3 seconds
         static constexpr uint32_t MIN_BETWEEN_PLAYS_MILLIS = 5000; // Minimum time between plays of 5 seconds
+
+        static constexpr ledc_channel_t SPEAKER_CH = LEDC_CHANNEL_0;
+        static constexpr ledc_timer_t SPEAKER_TIMER = LEDC_TIMER_0;
  };
