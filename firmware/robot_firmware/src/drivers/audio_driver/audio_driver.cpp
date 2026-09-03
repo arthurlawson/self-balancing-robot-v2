@@ -1,7 +1,13 @@
 #include "audio_driver.h"
 
 AudioDriver::AudioDriver(uint8_t audioPin)
-    : _audioPin(audioPin), _isPlaying(false), _lastPlayTime(0), _playbackStartTime(0), _lastSampleTimeMicros(0) {}
+    : _audioPin(audioPin), _isPlaying(false), _lastPlayTime(0), _playbackStartTime(0), _lastSampleTimeMicros(0) {
+
+        // enforce low state first time
+        pinMode(_audioPin, OUTPUT);
+        digitalWrite(_audioPin, LOW);
+
+    }
 
 bool AudioDriver::Begin() {
     if (!LittleFS.begin()) {
@@ -11,6 +17,10 @@ bool AudioDriver::Begin() {
 
     _totalAudioFiles = CountAudioFiles();
     Serial.printf("Total audio files found: %d\n", _totalAudioFiles);
+
+    // Double enforce low state prior to register mounting
+    pinMode(_audioPin, OUTPUT);
+    digitalWrite(_audioPin, LOW);
 
     // 100kHz carrier frequency to prevent high pitch speaker noise.
     // 8-bit resolution for 8-bit WAV files.
@@ -33,6 +43,10 @@ bool AudioDriver::Begin() {
         .hpoint = 0
     };
     ledc_channel_config(&ledc_channel);
+
+    // Triple enforce low state post register mounting
+    pinMode(_audioPin, OUTPUT);
+    digitalWrite(_audioPin, LOW);
 
     Serial.println("AudioDriver initialized successfully.");
     return true;
@@ -126,6 +140,10 @@ void AudioDriver::StopPlayback() {
     // Reset the LEDC channel to 0 duty cycle to prevent thermal loading on the 1/4W resistors.
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+
+    // Ground the pin
+    pinMode(_audioPin, OUTPUT);
+    digitalWrite(_audioPin, LOW);
 
     _lastPlayTime = millis();
     Serial.println("AUDIO stopped.");

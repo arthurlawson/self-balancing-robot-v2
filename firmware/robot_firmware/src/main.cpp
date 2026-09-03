@@ -43,6 +43,8 @@ void ARDUINO_ISR_ATTR onTimer() {
 void setup() {
   Serial.begin(115200);
 
+  speakers.Begin(); // Instantly claim pin 13 to ground the pin to prevent thermal overheating
+
   if (!imuSvc.Begin(SDA_PIN, SCL_PIN)) {
     while (1) {
       Serial.println("IMU Initialization Failed.");
@@ -52,7 +54,6 @@ void setup() {
 
   ledSvc.Begin();
   pwrSvc.Begin();
-  speakers.Begin();
   robot.Begin();
 
   timer = timerBegin(0, TIMER_PRESCALER, true);
