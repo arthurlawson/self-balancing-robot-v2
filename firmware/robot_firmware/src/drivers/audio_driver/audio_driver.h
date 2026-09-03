@@ -2,7 +2,7 @@
  * @file audio_driver.h
  * @brief Audio driver class for ESP32-S3 microcontroller, providing functionality to play files stored in the data partition
  * controlled using LEDC - LED Control (originally designed for precise PWM control of LEDs), and adjusted for use with 8-bit WAV files. 
- * The driver supports playing audio files from the LittleFS filesystem, with a maximum playtime of 3 seconds and a minimum time between 
+ * The driver supports playing random audio files from the LittleFS file system, with a maximum playtime of 3 seconds and a minimum time between 
  * plays of 5 seconds to prevent overheating of the weak 1/4W resistors used.
  * 
  * @author Arthur Lawson
