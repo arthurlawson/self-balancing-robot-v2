@@ -20,6 +20,8 @@ class ImuService {
         void Update();
         void Reset() { _filter.Reset(); }
         float GetFilteredRoll() const { return -_filter.GetRoll(); } // negative due to orientation of the IMU
+        bool IsUpright() const { return _accel.acceleration.z > 5.0f; }
+
     private:
         Adafruit_MPU6050 _mpu;
         KalmanFilter& _filter;

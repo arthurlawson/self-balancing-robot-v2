@@ -48,7 +48,7 @@ void RobotController::Update() {
             return;
         }
     } else {
-        if (error <= ACTIVATION_ANGLE) {
+        if (error <= ACTIVATION_ANGLE && _imuSvc.IsUpright()) {
             _pid.Reset();
             _kf.Reset();
             _curState = RobotState::IDLE;
