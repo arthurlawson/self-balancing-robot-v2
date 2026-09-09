@@ -12,6 +12,7 @@
 #include "services/led_service/led_service.h"
 #include "services/power_service/power_service.h"
 #include "drivers/motor_driver/drv8833.h"
+#include "drivers/audio_driver/audio_driver.h"
 #include "utils/pid_controller/pid_controller.h"
 
 class RobotController {
@@ -30,10 +31,12 @@ class RobotController {
             FALLEN,
             BATTERY_LOW
         };
-        RobotController(ImuService& imuSvc, LedService& ledSvc, PowerService& pwrSvc, DRV8833& motors, PidController& pid, KalmanFilter& kf);
+
+        RobotController(ImuService& imuSvc, LedService& ledSvc, PowerService& pwrSvc, DRV8833& motors, PidController& pid, 
+                        KalmanFilter& kf, AudioDriver& speaker);             
         void Begin();
         void Update();
-        void SetState(RobotState state);
+
     private:
         ImuService& _imuSvc;
         LedService& _ledSvc;
@@ -41,6 +44,7 @@ class RobotController {
         DRV8833& _motors;
         PidController& _pid;
         KalmanFilter& _kf;
+        AudioDriver& _speaker;
 
         RobotState _curState;
 
@@ -48,4 +52,5 @@ class RobotController {
         float _yawTurnOffset;
 
         static constexpr float TURN_SPEED_OFFSET = 35.0f;
+
 };

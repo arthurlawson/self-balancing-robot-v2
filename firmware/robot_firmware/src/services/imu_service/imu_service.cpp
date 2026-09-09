@@ -13,7 +13,7 @@ bool ImuService::Begin(int sda, int scl) {
 
     _mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
     _mpu.setGyroRange(MPU6050_RANGE_250_DEG);
-    _mpu.setFilterBandwidth(MPU6050_BAND_184_HZ);
+    _mpu.setFilterBandwidth(MPU6050_BAND_44_HZ);
 
     return true;
 }

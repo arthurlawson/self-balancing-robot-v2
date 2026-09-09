@@ -1,19 +1,14 @@
 #include <config.h>
 #include "robot_controller.h"
 
-RobotController::RobotController(ImuService& imuSvc, LedService& ledSvc, PowerService& pwrSvc, DRV8833& motors, PidController& pid, KalmanFilter& kf)
+RobotController::RobotController(ImuService& imuSvc, LedService& ledSvc, PowerService& pwrSvc, DRV8833& motors, PidController& pid, 
+                                 KalmanFilter& kf, AudioDriver& speaker)
     : _imuSvc(imuSvc), _ledSvc(ledSvc), _pwrSvc(pwrSvc), _motors(motors), _pid(pid), _kf(kf), _curState(RobotState::FALLEN),
-      _driveSpeedOffset(0.0f), _yawTurnOffset(0.0f) {}
+      _driveSpeedOffset(0.0f), _yawTurnOffset(0.0f), _speaker(speaker) {}
 
 void RobotController::Begin() {
     _motors.StopBoth();
     _curState = RobotState::FALLEN;
-}
-
-void RobotController::SetState(RobotState state) {
-    // Ignore state changes if battery is low / the robot has fallen
-    if (_curState == RobotState::BATTERY_LOW || _curState == RobotState::FALLEN) return;
-    _curState = state;
 }
 
 void RobotController::Update() {
@@ -23,6 +18,7 @@ void RobotController::Update() {
         _motors.StopBoth();
         _pid.Reset();
         _ledSvc.SetState(LedService::LED_BLINK_SLOW);
+        _speaker.StopPlayback();
         return;
     }  
 
@@ -45,12 +41,16 @@ void RobotController::Update() {
             _motors.StopBoth();
             _pid.Reset();
             _kf.Reset();
+
+            _speaker.PlayRandomAudio();
             return;
         }
     } else {
         if (error <= ACTIVATION_ANGLE && _imuSvc.IsUpright()) {
             _pid.Reset();
             _kf.Reset();
+            
+            _speaker.StopPlayback();
             _curState = RobotState::IDLE;
         } else {
             _motors.StopBoth();
@@ -108,8 +108,15 @@ void RobotController::Update() {
     }
 
     // PID routine
-    _pid.SetSetpoint(DEFAULT_SETPOINT);
     float balancingOutput = _pid.Compute(curAngle, 255.0f);
+
+    if (balancingOutput > 0.0f) balancingOutput += MIN_PWM;
+    else if (balancingOutput < 0.0f) balancingOutput -= MIN_PWM;
+
+    if (balancingOutput > 255.0f) balancingOutput = 255.0f;
+    if (balancingOutput < -255.0f) balancingOutput = -255.0f;
+    
+    Serial.printf("Balancing Output: %.1f\n", balancingOutput);
 
     // Motor output
     int16_t leftDrive = static_cast<int16_t>((balancingOutput + _driveSpeedOffset + _yawTurnOffset));

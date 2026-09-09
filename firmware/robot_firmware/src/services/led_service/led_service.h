@@ -23,6 +23,7 @@ class LedService {
         void Update();
         void SetState(LedState state);
         bool IsBootComplete() const { return _bootComplete; }
+
     private:
         uint8_t _ledPin;
         LedState _curState;
@@ -33,7 +34,7 @@ class LedService {
         unsigned long _stateStartTime;
 
         static constexpr uint16_t BOOT_TIME_MS = 1500;
-        static constexpr uint8_t MAX_BRIGHT = 225; // Thermal protection hence not using max 255
+        static constexpr uint8_t MAX_BRIGHT = 50; // Thermal protection hence not using max 255
         static constexpr uint16_t BLINK_INTERVAL_MS = 1000;
 
         // Hardware segregation - bound to channel 1 and timer 1
@@ -44,4 +45,5 @@ class LedService {
             ledc_set_duty(LEDC_LOW_SPEED_MODE, LED_CH, duty);
             ledc_update_duty(LEDC_LOW_SPEED_MODE, LED_CH);
         }
+        
 };

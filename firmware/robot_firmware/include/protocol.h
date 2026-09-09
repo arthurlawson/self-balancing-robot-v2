@@ -7,4 +7,5 @@
 
 typedef struct {
     char command; // 'F' = Forward, 'B' = Backward, 'L' = Left, 'R' = Right
+    
 } ControlPacket;

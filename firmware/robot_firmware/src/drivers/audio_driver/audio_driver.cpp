@@ -1,20 +1,63 @@
 #include "audio_driver.h"
-#include "rom/gpio.h"
 #include "driver/gpio.h"
 
-AudioDriver::AudioDriver(uint8_t audioPin)
-    : _audioPin(audioPin), _isPlaying(false), _lastPlayTime(0), _playbackStartTime(0), _lastSampleTimeMicros(0) {
+void AudioPlaybackTask(void *pvParameters) {
+    AudioDriver *driver = (AudioDriver *)pvParameters;
+    
+    Serial.printf("[CORE 0] Spawning background audio stream for: %s\n", driver->_currentTrackPath);
+    
+    File audioFile = LittleFS.open(driver->_currentTrackPath, "r");
+    if (!audioFile) {
+        Serial.println("[CORE 0] ERROR: Failed to open audio file!");
+        driver->_isPlaying = false;
+        vTaskDelete(NULL);
+        return;
+    }
 
-        gpio_reset_pin((gpio_num_t)_audioPin);
-        pinMode(_audioPin, OUTPUT);
-        digitalWrite(_audioPin, LOW);
+    if (audioFile.available()) {
+        audioFile.seek(44, SeekSet); 
+    }
+
+    unsigned long startTime = millis();
+
+    static constexpr size_t BUFFER_SIZE = 512;
+    uint8_t ramBuffer[BUFFER_SIZE];
+
+    while (audioFile.available() && (millis() - startTime < driver->MAX_PLAY_DURATION_MILLIS) && driver->_isPlaying) {
+        size_t bytesRead = audioFile.read(ramBuffer, BUFFER_SIZE);
+
+        for (size_t i = 0; i < bytesRead; i++) {
+            if (!driver->_isPlaying) break;
+
+            // Hardware Protection Scaling Layer (Safe, moderate volume peak cap)
+            uint8_t scaled_sample = (ramBuffer[i] * 180) / 255;
+
+            ledc_set_duty(LEDC_LOW_SPEED_MODE, SPEAKER_CH, scaled_sample);
+            ledc_update_duty(LEDC_LOW_SPEED_MODE, SPEAKER_CH);
+            
+            delayMicroseconds(driver->SAMPLE_DELAY_MICROS); 
+        }
+    }
+
+    audioFile.close();
+    driver->SmoothTurnOff();
+
+    Serial.println("[CORE 0] Audio stream complete. Terminating thread.");
+    
+    driver->_isPlaying = false;
+    driver->_lastPlayTime = millis();
+    vTaskDelete(NULL); 
+}
+
+AudioDriver::AudioDriver(uint8_t audioPin)
+    : _audioPin(audioPin), _isPlaying(false), _lastPlayTime(0), _totalAudioFiles(0) {
+
+    memset(_currentTrackPath, 0, sizeof(_currentTrackPath));
+
     }
 
 bool AudioDriver::Begin() {
-    if (!LittleFS.begin()) {
-        Serial.println("LittleFS Begin Failed.");
-        return false;
-    }
+    if (!LittleFS.begin(true)) return false;
 
     _totalAudioFiles = CountAudioFiles();
     Serial.printf("Total audio files found: %d\n", _totalAudioFiles);
@@ -41,7 +84,7 @@ bool AudioDriver::Begin() {
     };
     ledc_channel_config(&ledc_channel);
 
-    StopPlayback();
+    SmoothTurnOff();
 
     Serial.println("AudioDriver initialized successfully.");
     return true;
@@ -51,15 +94,13 @@ uint8_t AudioDriver::CountAudioFiles() {
     uint8_t count = 0;
 
     File root = LittleFS.open("/");
-    if (!root || !root.isDirectory()) {
-        Serial.println("Failed to open the root directory for counting");
-        return 0;
-    }
+    if (!root || !root.isDirectory()) return 0;
 
     File file = root.openNextFile();
     while (file) {
+        String filename = file.name();
         // Only count if the prefix is "audio" and the file is not a directory
-        if (!file.isDirectory() && strstr(file.name(), "audio") != nullptr) {
+        if (!file.isDirectory() && filename.indexOf("audio") != -1) {
             count++;
         }
         file = root.openNextFile();
@@ -70,85 +111,46 @@ uint8_t AudioDriver::CountAudioFiles() {
 }
 
 void AudioDriver::PlayRandomAudio() {
-    if (_totalAudioFiles == 0) {
-        Serial.println("AUDIO ERROR: No audio files found to play.");
-        return;
-    }
-
-    unsigned long now = millis();
-    // Safety cooling guard protects the weak 1/4W resistors from overheating.
-    if (now - _lastPlayTime < MIN_BETWEEN_PLAYS_MILLIS || _isPlaying) return;
+    // Dont play if has already played something in the last 5 seconds / is still currently playing something
+    if (millis() - _lastPlayTime < AudioDriver::MIN_BETWEEN_PLAYS_MILLIS || _isPlaying || _totalAudioFiles == 0) return;
 
     int randomFileIndex = random(0, _totalAudioFiles);
-    char filepath[32];
-    snprintf(filepath, sizeof(filepath), "/audio%d.wav", randomFileIndex);
-    
-    StartPlayback(filepath);
-}
-
-void AudioDriver::StartPlayback(const char *filepath) {
-    _audioFile = LittleFS.open(filepath, "r");
-    if (!_audioFile) {
-        Serial.printf("Failed to open audio file: %s\n", filepath);
-        return;
-    }
-
-    // Skip the 44-byte WAV Header
-    if (_audioFile.available()) {
-        _audioFile.seek(44, SeekSet);
-    }
-
-    // Re-bind the pin to the LEDC hardware timer only when audio needs to actively play out the speaker
-    ledc_channel_config_t ledc_channel = {
-        .gpio_num = _audioPin,
-        .speed_mode = LEDC_LOW_SPEED_MODE,
-        .channel = SPEAKER_CH,
-        .intr_type = LEDC_INTR_DISABLE,
-        .timer_sel = SPEAKER_TIMER,
-        .duty = 0,
-        .hpoint = 0
-    };
-    ledc_channel_config(&ledc_channel);
+    snprintf(_currentTrackPath, sizeof(_currentTrackPath), "/audio%d.wav", randomFileIndex);
 
     _isPlaying = true;
-    _playbackStartTime = millis();
-    _lastSampleTimeMicros = micros();
-    Serial.printf("AUDIO playing: %s\n", filepath);
-}
 
-void AudioDriver::Update() {
-    if (!_isPlaying) return;
-
-    unsigned long now = millis();
-    if (now - _playbackStartTime >= MAX_PLAY_DURATION_MILLIS) {
-        StopPlayback();
-        return;
-    }
-
-    uint32_t nowMicros = micros();
-    if (nowMicros - _lastSampleTimeMicros >= SAMPLE_DELAY_MICROS) {
-        uint8_t wavSample = _audioFile.read();
-
-        // Feed the sample to the LEDC channel for playback. 
-        // The LEDC peripheral auto handles the PWM output based on the set duty cycle.
-        ledc_set_duty(LEDC_LOW_SPEED_MODE, SPEAKER_CH, wavSample);
-        ledc_update_duty(LEDC_LOW_SPEED_MODE, SPEAKER_CH);
-
-        _lastSampleTimeMicros = nowMicros;
-    }
+    xTaskCreatePinnedToCore(
+        AudioPlaybackTask,
+        "AudioPlaybackTask",
+        4096,
+        this,
+        1,
+        NULL,
+        0
+    );
 }
 
 void AudioDriver::StopPlayback() {
+    if (!_isPlaying) return;
+
     _isPlaying = false;
-    if (_audioFile) {
-        _audioFile.close();
+    _lastPlayTime = millis();
+
+    Serial.println("[AUDIO] Stop requested.");
+}
+
+void AudioDriver::SmoothTurnOff() {
+    uint32_t curDuty = ledc_get_duty(LEDC_LOW_SPEED_MODE, SPEAKER_CH);
+
+    while (curDuty > 0) {
+        curDuty = (curDuty > 15) ? (curDuty - 15) : 0;
+        ledc_set_duty(LEDC_LOW_SPEED_MODE, SPEAKER_CH, curDuty);
+        ledc_update_duty(LEDC_LOW_SPEED_MODE, SPEAKER_CH);
+        delayMicroseconds(150);
     }
 
-    ledc_stop(LEDC_LOW_SPEED_MODE, SPEAKER_CH, 0);
-    gpio_reset_pin((gpio_num_t)_audioPin);
-    pinMode(_audioPin, OUTPUT);
-    digitalWrite(_audioPin, LOW);
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, SPEAKER_CH, 0);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, SPEAKER_CH);
 
-    _lastPlayTime = millis();
-    Serial.println("AUDIO stopped.");
+    Serial.println("[AUDIO] Speaker safely turned off and locked low");
 }

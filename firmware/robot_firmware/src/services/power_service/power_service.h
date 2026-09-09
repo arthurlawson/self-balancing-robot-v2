@@ -12,18 +12,21 @@
 
 class PowerService {
     public:
-        PowerService(uint8_t battPin, LedService& ledSvc, float threshold);
+        PowerService(uint8_t battPin, LedService& ledSvc);
         void Begin();
         bool IsBatteryLow();
+
     private:
         LedService& _ledSvc;
         uint8_t _battPin;
-        float _threshold;
         float _curVoltage;
 
         bool _isLowBatt;
         unsigned long _sagTimerStartMs;
         unsigned long _lastSampleTimeMs;
+
+        static constexpr float BATT_LOW_THRESHOLD = 5.5f;
         static constexpr uint16_t TIME_BETWEEN_CHECKS = 500;
         static constexpr unsigned long SAG_CONFIRMATION_DUR = 1000;
+        
 };

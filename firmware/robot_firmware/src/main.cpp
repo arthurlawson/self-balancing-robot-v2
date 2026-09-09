@@ -17,20 +17,20 @@
 #include "system/robot_controller/robot_controller.h"
 
 // UTILS
-KalmanFilter kf(DELTA_T_SEC);
-PidController pid(DEFAULT_SETPOINT, KP, KI, KD, DELTA_T_SEC);
+KalmanFilter kf;
+PidController pid;
 
 // DRIVERS
 DRV8833 motors(IN1_PIN, IN2_PIN, IN3_PIN, IN4_PIN);
-AudioDriver speakers(SPEAKER_PIN);
+AudioDriver speaker(SPEAKER_PIN);
 
 // SERVICES
 ImuService imuSvc(kf);
 LedService ledSvc(LED_PIN);
-PowerService pwrSvc(BATT_PIN, ledSvc, BATT_THRESHOLD);
+PowerService pwrSvc(BATT_PIN, ledSvc);
 
 // ROBOT CONTROL SYSTEMS
-RobotController robot(imuSvc, ledSvc, pwrSvc, motors, pid, kf);
+RobotController robot(imuSvc, ledSvc, pwrSvc, motors, pid, kf, speaker);
 
 // HARDWARE TIMER
 volatile bool timerFlag = false;
@@ -42,8 +42,16 @@ void ARDUINO_ISR_ATTR onTimer() {
 
 void setup() {
   Serial.begin(115200);
+  delay(200);
 
-  speakers.Begin(); // Instantly claim pin 13 to ground the pin to prevent thermal overheating
+  Serial.println("\n[BOOT] Power rails stabilized. Initiating hardware mounts...");
+
+  randomSeed(analogRead(0));
+
+  // 2. Safely initialize your speaker driver to clamp your transistor gate
+  if (!speaker.Begin()) {
+    Serial.println("[BOOT] WARNING: Audio Driver mount failed to clear filesystem.");
+  }
 
   if (!imuSvc.Begin(SDA_PIN, SCL_PIN)) {
     while (1) {
@@ -65,8 +73,6 @@ void setup() {
 }
 
 void loop() {
-  speakers.Update();
-
   if (timerFlag) {
     timerFlag = false;
 

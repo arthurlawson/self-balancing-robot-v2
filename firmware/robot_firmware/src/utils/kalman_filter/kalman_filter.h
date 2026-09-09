@@ -13,13 +13,13 @@
 
 class KalmanFilter {
     public:
-        KalmanFilter(float dtSec);
+        KalmanFilter();
         void Predict(const float gyroRollRateDeg);
         void MeasurementTask(const float accelRollDeg);
         float GetRoll() const;
         void Reset();
+
     private:
-        float _dtSec;
         bool _isInitialized;
 
         // Tuning Parameters matching the MPU6050 noise profiles
@@ -37,4 +37,5 @@ class KalmanFilter {
         float _pRoll01;     // Covariance between the estimated angle and bias
         float _pRoll10;     // Covariance between the estimated angle and bias
         float _pRoll11;     // Bias Variance
+
 };

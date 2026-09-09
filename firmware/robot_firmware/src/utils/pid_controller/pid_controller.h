@@ -11,17 +11,16 @@
 
 class PidController {
     public:
-        PidController(float setpoint, float kp, float ki, float kd, float dtSec);
+        PidController();
         float Compute(float pv, float maxOutput);
-        void SetSetpoint(float setpoint);
         void SetKp(float kp);
         void SetKd(float kd);
         float GetDerivative() const;
         void LeakIntegral(float percentage);
         void Reset();
+
     private:
-        float _kp, _kd, _ki, _dtSec;
-        float _setpoint;
+        float _kp, _kd, _ki;
         float _integral;
         float _previousError;
         float _previousDerivative;

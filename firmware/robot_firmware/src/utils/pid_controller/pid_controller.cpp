@@ -1,36 +1,36 @@
 #include <Arduino.h>
+#include <config.h>
 #include <math.h>
 #include "pid_controller.h"
 
-PidController::PidController(float setpoint, float kp, float ki, float kd, float dtSec)
-    : _setpoint(setpoint), _kp(kp), _ki(ki), _kd(kd), _dtSec(dtSec) {
+PidController::PidController() {
 
-        Reset();
+    _kp = KP;
+    _kd = KD;
+    _ki = KI;
+
+    Reset();
 
 }
 
 float PidController::Compute(float pv, float maxOutput) {
-    _error = _setpoint - pv;
+    _error = DEFAULT_SETPOINT - pv;
 
     // Derivative with low pass filter
-    float rawDerivative = (_error - _previousError) / _dtSec;
+    float rawDerivative = (_error - _previousError) / DELTA_T_SEC;
     _derivative = (0.80f * _previousDerivative) + (0.20f * rawDerivative);
 
     _previousError = _error;
     _previousDerivative = _derivative;
 
     // Integral windup prevention
-    _integral += _error * _dtSec;
+    _integral += _error * DELTA_T_SEC;
     float maxIntegralBound = 50.0f / (_ki > 0.0f ? _ki : 1.0f);
     _integral = constrain(_integral, -maxIntegralBound, maxIntegralBound);
 
     // Generate output
     _out = (_kp * _error) + (_ki * _integral) + (_kd * _derivative);
     return constrain(_out, -maxOutput, maxOutput);
-}
-
-void PidController::SetSetpoint(float setpoint) {
-    _setpoint = setpoint;
 }
     
 void PidController::SetKp(float kp) {

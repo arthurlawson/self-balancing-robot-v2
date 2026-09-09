@@ -16,6 +16,7 @@ class DRV8833 {
         DRV8833(uint8_t in1, uint8_t in2, uint8_t in3, uint8_t in4);
         void Drive(int16_t left, int16_t right);
         void StopBoth();
+
     private: 
         uint8_t _in1, _in2, _in3, _in4;
 
@@ -29,4 +30,5 @@ class DRV8833 {
             ledc_set_duty(LEDC_LOW_SPEED_MODE, channel, duty);
             ledc_update_duty(LEDC_LOW_SPEED_MODE, channel);
         }
+        
 };

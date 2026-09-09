@@ -1,11 +1,10 @@
     #include <config.h>
-    #include "kalman_filter.h"
     #include <math.h>
+    #include "kalman_filter.h"
 
     static inline float Sqr(float x) { return x * x; }
 
-    KalmanFilter::KalmanFilter(float dtSec) 
-        : _dtSec(dtSec) {
+    KalmanFilter::KalmanFilter() {
 
         Reset();
 
@@ -15,12 +14,12 @@
     {
         // Subtract the estimated gyro bias to get an unbiased rotation rate
         float unbiasedGyroRate = gyroRollRateDeg - _rollBias;
-        _rollAngle += unbiasedGyroRate * _dtSec;
+        _rollAngle += unbiasedGyroRate * DELTA_T_SEC;
 
         // Error covariance matrix prediction step expanded (P = A*P*A' + Q)
-        _pRoll00 += (_dtSec * (_dtSec * _pRoll11 - _pRoll01 - _pRoll10)) + Q_INIT;
-        _pRoll01 -= _dtSec * _pRoll11;
-        _pRoll10 -= _dtSec * _pRoll11;
+        _pRoll00 += (DELTA_T_SEC * (DELTA_T_SEC * _pRoll11 - _pRoll01 - _pRoll10)) + Q_INIT;
+        _pRoll01 -= DELTA_T_SEC * _pRoll11;
+        _pRoll10 -= DELTA_T_SEC * _pRoll11;
         _pRoll11 += R_BIAS;
     }
 
