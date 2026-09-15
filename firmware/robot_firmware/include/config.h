@@ -25,14 +25,14 @@ static constexpr uint8_t SPEAKER_PIN = 13;
 static constexpr uint8_t LED_PIN = 39;
 
 // ========== SAFETY & LIMITS ==========
-static constexpr float DEFAULT_SETPOINT = 1.3f; // Coded to be +1 = 1 degree towards the front
+static constexpr float DEFAULT_SETPOINT = 1.3f;
 static constexpr float ACTIVATION_ANGLE = 3.0f;
 static constexpr float STOP_ANGLE = 50.0f;
 
 // ========== BASE PID TUNING ==========
 static constexpr float KP = 30.0f;
 static constexpr float KI = 0.0f;
-static constexpr float KD = 0.05f;// 0.0
+static constexpr float KD = 0.05f;
 static constexpr float MIN_PWM = 30.0f;
 
 // ========== FORWARD/BACKWARD ==========
