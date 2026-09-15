@@ -14,6 +14,7 @@
 #include "services/imu_service/imu_service.h"
 #include "services/led_service/led_service.h"
 #include "services/power_service/power_service.h"
+#include "services/remote_service/remote_service.h"
 #include "system/robot_controller/robot_controller.h"
 
 // UTILS
@@ -28,6 +29,7 @@ AudioDriver speaker(SPEAKER_PIN);
 ImuService imuSvc(kf);
 LedService ledSvc(LED_PIN);
 PowerService pwrSvc(BATT_PIN, ledSvc);
+RemoteService remote;
 
 // ROBOT CONTROL SYSTEMS
 RobotController robot(imuSvc, ledSvc, pwrSvc, motors, pid, kf, speaker);
@@ -62,6 +64,8 @@ void setup() {
 
   ledSvc.Begin();
   pwrSvc.Begin();
+  remote.Begin(robot);
+
   robot.Begin();
 
   timer = timerBegin(0, TIMER_PRESCALER, true);
@@ -78,6 +82,7 @@ void loop() {
 
     ledSvc.Update();
     imuSvc.Update();
+    remote.Update();
     robot.Update();
   }
 }

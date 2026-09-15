@@ -18,13 +18,14 @@ class ImuService {
         ImuService(KalmanFilter& filter);
         bool Begin(int sda, int scl);
         void Update();
-        void Reset() { _filter.Reset(); }
+        void Reset() { _filter.Reset(); _gyroRollRate = 0.0f ;}
         float GetFilteredRoll() const { return -_filter.GetRoll(); } // negative due to orientation of the IMU
         bool IsUpright() const { return _accel.acceleration.z > 5.0f; }
+        float GetGyroRollRate() const { return _gyroRollRate; }
 
     private:
         Adafruit_MPU6050 _mpu;
         KalmanFilter& _filter;
         sensors_event_t _accel, _gyro, _temp;
-        
+        float _gyroRollRate = 0.0f;
 };

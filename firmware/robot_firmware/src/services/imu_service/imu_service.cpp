@@ -13,21 +13,21 @@ bool ImuService::Begin(int sda, int scl) {
 
     _mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
     _mpu.setGyroRange(MPU6050_RANGE_250_DEG);
-    _mpu.setFilterBandwidth(MPU6050_BAND_44_HZ);
+    _mpu.setFilterBandwidth(MPU6050_BAND_260_HZ);
 
     return true;
 }
 
 void ImuService::Update() {
     if (_mpu.getEvent(&_accel, &_gyro, &_temp)) {
-        float gyroRollRateDeg = _gyro.gyro.x * RAD_TO_DEG;
+        _gyroRollRate = _gyro.gyro.x * RAD_TO_DEG;
 
         float ax = _accel.acceleration.x;
         float ay = _accel.acceleration.y;
         float az = _accel.acceleration.z;
         float accelRollDeg = atan2(ay, sqrt((ax * ax) + (az * az))) * RAD_TO_DEG;
 
-        _filter.Predict(gyroRollRateDeg);
+        _filter.Predict(_gyroRollRate);
         _filter.MeasurementTask(accelRollDeg);
     }
 }

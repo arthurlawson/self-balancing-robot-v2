@@ -36,6 +36,7 @@ class RobotController {
                         KalmanFilter& kf, AudioDriver& speaker);             
         void Begin();
         void Update();
+        void SetState(RobotState state);
 
     private:
         ImuService& _imuSvc;
@@ -47,10 +48,11 @@ class RobotController {
         AudioDriver& _speaker;
 
         RobotState _curState;
-
-        float _driveSpeedOffset;
         float _yawTurnOffset;
-
-        static constexpr float TURN_SPEED_OFFSET = 35.0f;
-
+        float _currentTargetLean;
+        float _currentBrakingLean;
+        bool _isDrivingInSameDir;
+        float _speedLeakAccumulator;
+        int _lastDriveDir;
+        bool _isBrakingLock;
 };

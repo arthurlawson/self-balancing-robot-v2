@@ -4,11 +4,18 @@
 RobotController::RobotController(ImuService& imuSvc, LedService& ledSvc, PowerService& pwrSvc, DRV8833& motors, PidController& pid, 
                                  KalmanFilter& kf, AudioDriver& speaker)
     : _imuSvc(imuSvc), _ledSvc(ledSvc), _pwrSvc(pwrSvc), _motors(motors), _pid(pid), _kf(kf), _curState(RobotState::FALLEN),
-      _driveSpeedOffset(0.0f), _yawTurnOffset(0.0f), _speaker(speaker) {}
+      _speaker(speaker) {}
 
 void RobotController::Begin() {
     _motors.StopBoth();
     _curState = RobotState::FALLEN;
+    _currentTargetLean = DEFAULT_SETPOINT;
+    _currentBrakingLean = 0.0f;
+    _yawTurnOffset = 0.0f;
+    _isDrivingInSameDir = false;
+    _speedLeakAccumulator = 0.0f;
+    _lastDriveDir = 0;
+    _isBrakingLock = false;
 }
 
 void RobotController::Update() {
@@ -28,14 +35,112 @@ void RobotController::Update() {
         return;
     }
 
+    // Lean Axis
+    float targetLeanAngle = DEFAULT_SETPOINT;
+    int currentDriveDir = 0;
+
+    bool isDriving = (_curState == RobotState::FORWARD || _curState == RobotState::FORWARD_LEFT || _curState == RobotState::FORWARD_RIGHT ||
+                      _curState == RobotState::BACKWARD || _curState == RobotState::BACKWARD_LEFT || _curState == RobotState::BACKWARD_RIGHT);
+
+    float rawTarget = 0.0f;
+    if (isDriving) {
+        if (_curState == RobotState::FORWARD || _curState == RobotState::FORWARD_LEFT || _curState == RobotState::FORWARD_RIGHT) {
+            rawTarget = MAX_DRIVE_LEAN_DEG;
+            currentDriveDir = 1;
+        } else {
+            rawTarget = -MAX_DRIVE_LEAN_DEG;
+            currentDriveDir = -1;
+        }
+
+        bool isExplicitCounterSteer = (currentDriveDir == 1 && _lastDriveDir == -1) ||
+                                      (currentDriveDir == -1 && _lastDriveDir == 1);
+
+         _isDrivingInSameDir = ((rawTarget > 0.0f && _currentTargetLean > DEFAULT_SETPOINT + 0.1f) ||
+                               (rawTarget < 0.0f && _currentTargetLean < DEFAULT_SETPOINT - 0.1f));
+        
+        if (_isDrivingInSameDir) {
+            float speedLimitFactor = 1.0f - (fabs(_speedLeakAccumulator) * 0.75f);
+            if (speedLimitFactor < 0.20f) speedLimitFactor = 0.20f;
+
+            targetLeanAngle = DEFAULT_SETPOINT + (rawTarget * speedLimitFactor);
+            targetLeanAngle -= (currentDriveDir * fabs(_speedLeakAccumulator) * 2.5f); 
+        } else {
+            if (isExplicitCounterSteer) {
+                _speedLeakAccumulator = 0.0f; 
+            }
+            targetLeanAngle = DEFAULT_SETPOINT + rawTarget;
+        }
+    }
+    else {
+        targetLeanAngle = DEFAULT_SETPOINT;
+        currentDriveDir = 0;
+
+        if (_currentTargetLean > DEFAULT_SETPOINT + 0.5f) {
+            _currentBrakingLean = -2.0f; 
+        }
+        else if (_currentTargetLean < DEFAULT_SETPOINT - 0.5f) {
+            _currentBrakingLean = 2.0f;
+        }
+        else {
+            _currentBrakingLean *= 0.85f; 
+        }
+    }
+
+    float dynamicTarget = targetLeanAngle + _currentBrakingLean;
+
+    float activeRampRate = MOVEMENT_RAMP_RATE;
+    if (dynamicTarget == DEFAULT_SETPOINT || 
+        fabs(dynamicTarget - DEFAULT_SETPOINT) < fabs(_currentTargetLean - DEFAULT_SETPOINT)) {
+        activeRampRate = BRAKING_RAMP_RATE; 
+    }
+
+    bool isExplicitCounterSteer = (currentDriveDir == 1 && _lastDriveDir == -1) ||
+                                  (currentDriveDir == -1 && _lastDriveDir == 1);
+    
+    if (isExplicitCounterSteer) {
+        _currentTargetLean = dynamicTarget;
+        _isBrakingLock = true;
+    } else {
+        _currentTargetLean = ((1.0f - activeRampRate) * _currentTargetLean) + (activeRampRate * dynamicTarget);
+    }
+
+    if (isDriving) {
+        _lastDriveDir = currentDriveDir;
+    }
+
+    // Turn Axis
+    if (_curState == RobotState::LEFT) {
+        _yawTurnOffset = TURN_SPEED_OFFSET;
+    } 
+    else if (_curState == RobotState::RIGHT) {
+        _yawTurnOffset = -TURN_SPEED_OFFSET;
+    } 
+    else if (_curState == RobotState::FORWARD_LEFT || _curState == RobotState::BACKWARD_LEFT) {
+        _yawTurnOffset = TURN_SPEED_OFFSET * 0.30f;
+    } 
+    else if (_curState == RobotState::FORWARD_RIGHT || _curState == RobotState::BACKWARD_RIGHT) {
+        _yawTurnOffset = -TURN_SPEED_OFFSET * 0.30f; 
+    } 
+    else {
+        _yawTurnOffset = 0.0f; // No active turning component
+    }
+
     // Orientation calculations
     float curAngle = _imuSvc.GetFilteredRoll();
-    float error = fabs(curAngle - DEFAULT_SETPOINT);
+    float safetyError = fabs(curAngle - DEFAULT_SETPOINT);
+    float controlError = fabs(curAngle - _currentTargetLean);
 
     // Fallen Check
     if (_curState != RobotState::FALLEN) {
-        if (error > STOP_ANGLE) {
+        if (safetyError > STOP_ANGLE) {
             _curState = RobotState::FALLEN;
+            _currentTargetLean = DEFAULT_SETPOINT;
+            _currentBrakingLean = 0.0f;
+            _speedLeakAccumulator = 0.0f;
+            _lastDriveDir = 0;
+            _isBrakingLock = false;
+            _isDrivingInSameDir = false;
+
             _imuSvc.Reset();
             _ledSvc.SetState(LedService::LED_PULSING);
             _motors.StopBoth();
@@ -46,7 +151,7 @@ void RobotController::Update() {
             return;
         }
     } else {
-        if (error <= ACTIVATION_ANGLE && _imuSvc.IsUpright()) {
+        if (safetyError <= ACTIVATION_ANGLE && _imuSvc.IsUpright()) {
             _pid.Reset();
             _kf.Reset();
             
@@ -59,67 +164,91 @@ void RobotController::Update() {
         }
     }
 
-    // Motion coordination for each state
-    static constexpr float DRIVE_BASE_OFFSET = 45.0f; // Constant initial torque
-    
-    switch (_curState) {
-        case RobotState::FORWARD:
-            _driveSpeedOffset = DRIVE_BASE_OFFSET;
-            _yawTurnOffset = 0.0f;
-            break;
-        case RobotState::BACKWARD:
-            _driveSpeedOffset = -DRIVE_BASE_OFFSET;
-            _yawTurnOffset = 0.0f;
-            break;
-        case RobotState::LEFT:
-            _driveSpeedOffset = 0.0f;
-            _yawTurnOffset = -TURN_SPEED_OFFSET; 
-            break;
-        case RobotState::RIGHT:
-            _driveSpeedOffset = 0.0f;
-            _yawTurnOffset = TURN_SPEED_OFFSET;  
-            break;
-        case RobotState::FORWARD_LEFT:
-            _driveSpeedOffset = DRIVE_BASE_OFFSET;
-            _yawTurnOffset = -TURN_SPEED_OFFSET * 0.6f; 
-            break;
-        case RobotState::FORWARD_RIGHT:
-            _driveSpeedOffset = DRIVE_BASE_OFFSET;
-            _yawTurnOffset = TURN_SPEED_OFFSET * 0.6f;  
-            break;
-        case RobotState::BACKWARD_LEFT:
-            _driveSpeedOffset = -DRIVE_BASE_OFFSET;
-            _yawTurnOffset = -TURN_SPEED_OFFSET * 0.6f; 
-            break;
-        case RobotState::BACKWARD_RIGHT:
-            _driveSpeedOffset = -DRIVE_BASE_OFFSET;
-            _yawTurnOffset = TURN_SPEED_OFFSET * 0.6f;  
-            break;
-        case RobotState::IDLE:
-        default:
-            _driveSpeedOffset = 0.0f; 
-            _yawTurnOffset = 0.0f;
-            break;
-    } 
-
     // Set normal active lighting
     if (_curState != RobotState::FALLEN && _curState != RobotState::BATTERY_LOW) {
         _ledSvc.SetState(LedService::LED_ON);
     }
 
-    // PID routine
-    float balancingOutput = _pid.Compute(curAngle, 255.0f);
+    // Gain Schedule
+    bool isPureSpin = ((_curState == RobotState::LEFT || _curState == RobotState::RIGHT) && targetLeanAngle == DEFAULT_SETPOINT);
 
-    if (balancingOutput > 0.0f) balancingOutput += MIN_PWM;
-    else if (balancingOutput < 0.0f) balancingOutput -= MIN_PWM;
+    float currentKp = KP;
+    float currentKd = KD;
+    float currentMinPwm = MIN_PWM;
 
-    if (balancingOutput > 255.0f) balancingOutput = 255.0f;
-    if (balancingOutput < -255.0f) balancingOutput = -255.0f;
+    static float smoothedYawOffset = 0.0f;
+
+    if (isPureSpin) {
+        smoothedYawOffset = _yawTurnOffset;
+    } else {
+        smoothedYawOffset = (0.90f * smoothedYawOffset) + (0.10f * _yawTurnOffset); 
+    }
+
+    if (isExplicitCounterSteer && safetyError > 1.0f) {
+        currentKp *= 3.0f; 
+        currentKd *= 4.0f; 
+        currentMinPwm += 40.0f; 
+    }
+
+    currentKp = constrain(currentKp, 0.0f, 220.0f);
+    currentKd = constrain(currentKd, 0.0f, 3.5f);
+    currentMinPwm = constrain(currentMinPwm, 0.0f, 160.0f);
+
+    _pid.SetKp(currentKp);
+    _pid.SetKd(currentKd);
+
+    float virtualAngle = curAngle - _currentTargetLean;
+    float balancingOutput = _pid.Compute(virtualAngle, 255.0f);
+
+    if (isDriving) {
+        bool samePhysicalDir = (currentDriveDir == 1 && _currentTargetLean > DEFAULT_SETPOINT + 0.1f) || 
+                               (currentDriveDir== -1 && _currentTargetLean < DEFAULT_SETPOINT - 0.1f);
+
+        _isDrivingInSameDir = (samePhysicalDir && !_isBrakingLock);
+
+        if (_isDrivingInSameDir) {
+            _speedLeakAccumulator = (0.98f * _speedLeakAccumulator) + (0.02f * (balancingOutput / 255.0f));
+            
+            float speedLimitFactor = 1.0f - (fabs(_speedLeakAccumulator) * 0.75f);
+            if (speedLimitFactor < 0.20f) speedLimitFactor = 0.20f;
+
+            float limitedTarget = DEFAULT_SETPOINT + (rawTarget * speedLimitFactor) + _currentBrakingLean;
+            virtualAngle = curAngle - limitedTarget;
+            balancingOutput = _pid.Compute(virtualAngle, 255.0f);
+        } else {
+            if (isExplicitCounterSteer) {
+                _speedLeakAccumulator = 0.0f; 
+            }
+        }
+    } else {
+        _isBrakingLock = false;
+        _speedLeakAccumulator *= 0.98f;
+    }
+
+    if (controlError > 0.2f) {
+        if (balancingOutput > 0.0f) balancingOutput += currentMinPwm;
+        else if (balancingOutput < 0.0f) balancingOutput -= currentMinPwm;
+    } else {
+        balancingOutput = 0.0f;
+    }
     
-    Serial.printf("Balancing Output: %.1f\n", balancingOutput);
+    balancingOutput = constrain(balancingOutput, -255.0f, 255.0f);
+
+    float balanceScale = 1.0f - (fabs(smoothedYawOffset) / 255.0f) * 0.7f;
+    float scaledBalance = balancingOutput * balanceScale;
 
     // Motor output
-    int16_t leftDrive = static_cast<int16_t>((balancingOutput + _driveSpeedOffset + _yawTurnOffset));
-    int16_t rightDrive = static_cast<int16_t>((balancingOutput + _driveSpeedOffset - _yawTurnOffset));
+    int16_t leftDrive = 0;
+    int16_t rightDrive = 0;
+
+    leftDrive  = static_cast<int16_t>((scaledBalance + smoothedYawOffset) * LEFT_TRIM);
+    rightDrive = static_cast<int16_t>((scaledBalance - smoothedYawOffset) * RIGHT_TRIM);
+
     _motors.Drive(leftDrive, rightDrive);
+}
+
+void RobotController::SetState(RobotState state) {
+    if (_curState == RobotState::FALLEN || _curState == RobotState::BATTERY_LOW) return;
+
+    _curState = state;
 }
