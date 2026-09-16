@@ -25,7 +25,6 @@ class PowerService {
         unsigned long _sagTimerStartMs;
         unsigned long _lastSampleTimeMs;
 
-        static constexpr float BATT_LOW_THRESHOLD = 5.5f;
         static constexpr uint16_t TIME_BETWEEN_CHECKS = 500;
         static constexpr unsigned long SAG_CONFIRMATION_DUR = 1000;
         

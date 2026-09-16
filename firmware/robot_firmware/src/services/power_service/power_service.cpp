@@ -1,3 +1,4 @@
+#include <config.h>
 #include "power_service.h"
 
 PowerService::PowerService(uint8_t battPin, LedService& ledSvc)
