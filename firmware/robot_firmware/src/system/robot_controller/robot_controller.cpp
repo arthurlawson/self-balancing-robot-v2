@@ -43,6 +43,7 @@ void RobotController::Update() {
                       _curState == RobotState::BACKWARD || _curState == RobotState::BACKWARD_LEFT || _curState == RobotState::BACKWARD_RIGHT);
 
     float rawTarget = 0.0f;
+
     if (isDriving) {
         if (_curState == RobotState::FORWARD || _curState == RobotState::FORWARD_LEFT || _curState == RobotState::FORWARD_RIGHT) {
             rawTarget = MAX_DRIVE_LEAN_DEG;
@@ -63,7 +64,6 @@ void RobotController::Update() {
             if (speedLimitFactor < 0.20f) speedLimitFactor = 0.20f;
 
             targetLeanAngle = DEFAULT_SETPOINT + (rawTarget * speedLimitFactor);
-            targetLeanAngle -= (currentDriveDir * fabs(_speedLeakAccumulator) * 2.5f); 
         } else {
             if (isExplicitCounterSteer) {
                 _speedLeakAccumulator = 0.0f; 
@@ -76,10 +76,10 @@ void RobotController::Update() {
         currentDriveDir = 0;
 
         if (_currentTargetLean > DEFAULT_SETPOINT + 0.5f) {
-            _currentBrakingLean = -2.0f; 
+            _currentBrakingLean = -1.5f; 
         }
         else if (_currentTargetLean < DEFAULT_SETPOINT - 0.5f) {
-            _currentBrakingLean = 2.0f;
+            _currentBrakingLean = 1.5;
         }
         else {
             _currentBrakingLean *= 0.85f; 
@@ -88,6 +88,7 @@ void RobotController::Update() {
 
     float dynamicTarget = targetLeanAngle + _currentBrakingLean;
 
+    // Determine target interpolation speed
     float activeRampRate = MOVEMENT_RAMP_RATE;
     if (dynamicTarget == DEFAULT_SETPOINT || 
         fabs(dynamicTarget - DEFAULT_SETPOINT) < fabs(_currentTargetLean - DEFAULT_SETPOINT)) {
@@ -104,6 +105,7 @@ void RobotController::Update() {
         _currentTargetLean = ((1.0f - activeRampRate) * _currentTargetLean) + (activeRampRate * dynamicTarget);
     }
 
+    // Keep memory of the state (Ignoring Idle periods)
     if (isDriving) {
         _lastDriveDir = currentDriveDir;
     }
@@ -116,10 +118,10 @@ void RobotController::Update() {
         _yawTurnOffset = -TURN_SPEED_OFFSET;
     } 
     else if (_curState == RobotState::FORWARD_LEFT || _curState == RobotState::BACKWARD_LEFT) {
-        _yawTurnOffset = TURN_SPEED_OFFSET * 0.30f;
+        _yawTurnOffset = TURN_SPEED_OFFSET * 0.35f;
     } 
     else if (_curState == RobotState::FORWARD_RIGHT || _curState == RobotState::BACKWARD_RIGHT) {
-        _yawTurnOffset = -TURN_SPEED_OFFSET * 0.30f; 
+        _yawTurnOffset = -TURN_SPEED_OFFSET * 0.35f; 
     } 
     else {
         _yawTurnOffset = 0.0f; // No active turning component
@@ -128,7 +130,6 @@ void RobotController::Update() {
     // Orientation calculations
     float curAngle = _imuSvc.GetFilteredRoll();
     float safetyError = fabs(curAngle - DEFAULT_SETPOINT);
-    float controlError = fabs(curAngle - _currentTargetLean);
 
     // Fallen Check
     if (_curState != RobotState::FALLEN) {
@@ -137,7 +138,7 @@ void RobotController::Update() {
             _currentTargetLean = DEFAULT_SETPOINT;
             _currentBrakingLean = 0.0f;
             _speedLeakAccumulator = 0.0f;
-            _lastDriveDir = 0;
+            _lastDriveDir = 0; // IDLE
             _isBrakingLock = false;
             _isDrivingInSameDir = false;
 
@@ -146,15 +147,14 @@ void RobotController::Update() {
             _motors.StopBoth();
             _pid.Reset();
             _kf.Reset();
-
             _speaker.PlayRandomAudio();
+
             return;
         }
     } else {
         if (safetyError <= ACTIVATION_ANGLE && _imuSvc.IsUpright()) {
             _pid.Reset();
             _kf.Reset();
-            
             _speaker.StopPlayback();
             _curState = RobotState::IDLE;
         } else {
@@ -165,9 +165,7 @@ void RobotController::Update() {
     }
 
     // Set normal active lighting
-    if (_curState != RobotState::FALLEN && _curState != RobotState::BATTERY_LOW) {
-        _ledSvc.SetState(LedService::LED_ON);
-    }
+    _ledSvc.SetState(LedService::LED_ON);
 
     // Gain Schedule
     bool isPureSpin = ((_curState == RobotState::LEFT || _curState == RobotState::RIGHT) && targetLeanAngle == DEFAULT_SETPOINT);
@@ -177,15 +175,15 @@ void RobotController::Update() {
     float currentMinPwm = MIN_PWM;
 
     static float smoothedYawOffset = 0.0f;
-
     if (isPureSpin) {
         smoothedYawOffset = _yawTurnOffset;
     } else {
         smoothedYawOffset = (0.90f * smoothedYawOffset) + (0.10f * _yawTurnOffset); 
     }
 
+    // Coefficients updated to avoid oscillations
     if (isExplicitCounterSteer && safetyError > 1.0f) {
-        currentKp *= 3.0f; 
+        currentKp *= 5.0f; 
         currentKd *= 4.0f; 
         currentMinPwm += 40.0f; 
     }
@@ -194,6 +192,7 @@ void RobotController::Update() {
     currentKd = constrain(currentKd, 0.0f, 3.5f);
     currentMinPwm = constrain(currentMinPwm, 0.0f, 160.0f);
 
+    // PID computations
     _pid.SetKp(currentKp);
     _pid.SetKd(currentKd);
 
@@ -222,10 +221,11 @@ void RobotController::Update() {
         }
     } else {
         _isBrakingLock = false;
-        _speedLeakAccumulator *= 0.98f;
+        _speedLeakAccumulator *= 0.96f;
     }
 
-    if (controlError > 0.2f) {
+    // Deadband injection
+    if (fabs(virtualAngle) > 0.05) {
         if (balancingOutput > 0.0f) balancingOutput += currentMinPwm;
         else if (balancingOutput < 0.0f) balancingOutput -= currentMinPwm;
     } else {
@@ -234,6 +234,7 @@ void RobotController::Update() {
     
     balancingOutput = constrain(balancingOutput, -255.0f, 255.0f);
 
+    // Reduces balancing slightly during high speed turns, giving headroom
     float balanceScale = 1.0f - (fabs(smoothedYawOffset) / 255.0f) * 0.7f;
     float scaledBalance = balancingOutput * balanceScale;
 
@@ -241,8 +242,8 @@ void RobotController::Update() {
     int16_t leftDrive = 0;
     int16_t rightDrive = 0;
 
-    leftDrive  = static_cast<int16_t>((scaledBalance + smoothedYawOffset) * LEFT_TRIM);
-    rightDrive = static_cast<int16_t>((scaledBalance - smoothedYawOffset) * RIGHT_TRIM);
+    leftDrive  = static_cast<int16_t>((scaledBalance * LEFT_TRIM) + LEFT_TRIM);
+    rightDrive = static_cast<int16_t>((scaledBalance * RIGHT_TRIM) - RIGHT_TRIM);
 
     _motors.Drive(leftDrive, rightDrive);
 }
