@@ -6,6 +6,7 @@
 	(paper "A4")
 	(title_block
 		(title "ESP32-S3 SELF BALANCING ROBOT")
+		(date "2026-09-16")
 		(rev "v1.0")
 		(company "Arthur Lawson")
 	)
@@ -4899,7 +4900,7 @@
 				)
 			)
 		)
-		(property "Value" "22"
+		(property "Value" "47"
 			(at 207.01 26.924 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6366,7 +6367,7 @@
 				)
 			)
 		)
-		(property "Value" "22"
+		(property "Value" "47"
 			(at 207.01 21.844 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7628,7 +7629,7 @@
 				)
 			)
 		)
-		(property "Value" "220"
+		(property "Value" "150"
 			(at 180.34 43.434 0)
 			(show_name no)
 			(do_not_autoplace no)
