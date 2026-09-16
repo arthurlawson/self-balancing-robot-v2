@@ -35,10 +35,6 @@ class AudioDriver {
         char _currentTrackPath[32];
         volatile bool _isPlaying;
         unsigned long _lastPlayTime;
-        
-        static constexpr uint32_t MIN_BETWEEN_PLAYS_MILLIS = 5000; // Minimum time between plays of 5 secondsv
-        static constexpr uint32_t MAX_PLAY_DURATION_MILLIS = 3000; // Max playtime of 3 seconds
-        static constexpr uint32_t SAMPLE_DELAY_MICROS = 91;        // 11025 Hz Sample Rate
 
         uint8_t CountAudioFiles();
         void SmoothTurnOff();

@@ -1,3 +1,4 @@
+#include <config.h>
 #include "audio_driver.h"
 #include "driver/gpio.h"
 
@@ -23,19 +24,19 @@ void AudioPlaybackTask(void *pvParameters) {
     static constexpr size_t BUFFER_SIZE = 512;
     uint8_t ramBuffer[BUFFER_SIZE];
 
-    while (audioFile.available() && (millis() - startTime < driver->MAX_PLAY_DURATION_MILLIS) && driver->_isPlaying) {
+    while (audioFile.available() && (millis() - startTime < MAX_PLAY_DURATION_MILLIS) && driver->_isPlaying) {
         size_t bytesRead = audioFile.read(ramBuffer, BUFFER_SIZE);
 
         for (size_t i = 0; i < bytesRead; i++) {
             if (!driver->_isPlaying) break;
 
             // Hardware Protection Scaling Layer (Safe, moderate volume peak cap)
-            uint8_t scaled_sample = (ramBuffer[i] * 180) / 255;
+            uint8_t scaled_sample = (ramBuffer[i] * MAX_VOLUME) / 255;
 
             ledc_set_duty(LEDC_LOW_SPEED_MODE, SPEAKER_CH, scaled_sample);
             ledc_update_duty(LEDC_LOW_SPEED_MODE, SPEAKER_CH);
             
-            delayMicroseconds(driver->SAMPLE_DELAY_MICROS); 
+            delayMicroseconds(SAMPLE_DELAY_MICROS); 
         }
     }
 
@@ -112,7 +113,7 @@ uint8_t AudioDriver::CountAudioFiles() {
 
 void AudioDriver::PlayRandomAudio() {
     // Dont play if has already played something in the last 5 seconds / is still currently playing something
-    if (millis() - _lastPlayTime < AudioDriver::MIN_BETWEEN_PLAYS_MILLIS || _isPlaying || _totalAudioFiles == 0) return;
+    if (millis() - _lastPlayTime < MIN_BETWEEN_PLAYS_MILLIS || _isPlaying || _totalAudioFiles == 0) return;
 
     int randomFileIndex = random(0, _totalAudioFiles);
     snprintf(_currentTrackPath, sizeof(_currentTrackPath), "/audio%d.wav", randomFileIndex);
