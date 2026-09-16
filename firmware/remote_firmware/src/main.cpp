@@ -6,19 +6,12 @@
  */
 
 #include <Arduino.h>
+#include <config.h>
 #include <esp_now.h>
 #include <WiFi.h>
 #include <esp_wifi.h>
 #include "protocol.h"
 
-// Button Pins
-const int FWD_PIN = 3;
-const int LFT_PIN = 4;
-const int RGT_PIN = 6;
-const int BWD_PIN = 10;
-const int LED_PIN = 5; 
-
-uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 ControlPacket msg;
 esp_now_peer_info_t peerInfo;
 unsigned long lastAckTime = 0;
@@ -50,7 +43,7 @@ void setup() {
     esp_now_register_send_cb(OnDataSent);
 
     // Register peer
-    memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+    memcpy(peerInfo.peer_addr, BROADCAST_ADDRESS, 6);
     peerInfo.channel = 1;
     peerInfo.encrypt = false;
 
@@ -92,7 +85,7 @@ void loop() {
     static unsigned long lastSendTime = 0;
     if (millis() - lastSendTime > 50) { // send every 50ms - Half of watchdog timout in robot firmware
         lastSendTime = millis();
-        esp_now_send(broadcastAddress, (uint8_t*) &msg, sizeof(msg));
+        esp_now_send(BROADCAST_ADDRESS, (uint8_t*) &msg, sizeof(msg));
 
         if (msg.command != 'I') {
             Serial.printf("Transmitting: %c\n", msg.command);
