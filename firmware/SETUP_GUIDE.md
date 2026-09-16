@@ -1,20 +1,18 @@
-============================================================================================
 # Firmware Setup & Deployment Guide
-============================================================================================
 
 This guide provides step-by-step instructions for configuring, compiling, and flashing the firmware for both the self-balancing robot and its remote transmitter using **PlatformIO**.
 
-============================================================================================
+---
+
 ## Prerequisites & Installation
-============================================================================================
 
 Before flashing either device, ensure you have the following toolchain installed:
 1. **VS Code** with the **PlatformIO IDE** extension installed.
 2. An appropriate USB cable to connect your ESP32 boards directly to your computer.
 
-============================================================================================
+---
+
 ## 1. Remote Transmitter Firmware
-============================================================================================
 
 The remote controller firmware handles directional steering commands and pairs to the robot over ESP-NOW.
 
@@ -34,9 +32,9 @@ All transmitter configurations are managed centrally inside `firmware/remote_fir
 4. Connect your remote transmitter board via USB.
 5. Click **Build**, followed by **Upload**.
 
-============================================================================================
+---
+
 ## 2. Robot Firmware & Global Configuration
-============================================================================================
 
 The robot firmware handles the core balancing logic, motor kinematics, audio playback, and system safety thresholds.
 
@@ -61,9 +59,9 @@ All system adjustments are managed centrally inside `firmware/robot_firmware/inc
 3. Connect your self-balancing robot board via USB.
 4. Click **Build**, followed by **Upload**.
 
-============================================================================================
+---
+
 ## 3. Custom Audio & Filesystem Image (LittleFS)
-============================================================================================
 
 The robot plays raw audio samples directly from internal flash storage using optimized timing. To prevent static distortion or incorrect pitch playback, follow these instructions precisely:
 

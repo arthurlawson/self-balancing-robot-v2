@@ -1,6 +1,4 @@
-============================================================================================
 # 🤖 Self-Balancing Robot V2
-============================================================================================
 
 ### A Drivable Self-Balancing Robot That Screams When It Falls!
 
@@ -10,9 +8,9 @@ This project features a fully **custom-designed main controller PCB, proudly spo
 
 Built entirely within the PlatformIO ecosystem, this hardware platform integrates an MPU6050 IMU, DRV8833 motor driver, 2S LiPo battery safety logic, lighting, and onboard speaker playback systems.
 
-============================================================================================
+---
+
 ## Core Features
-============================================================================================
 
 *   **Advanced Estimation:** Custom Kalman Filter implementation paired with an MPU6050 IMU for precise roll angle determination.
 *   **Wireless Remote Control:** Directional steering control handled over a dedicated **ESP-NOW** wireless connection.
@@ -21,9 +19,9 @@ Built entirely within the PlatformIO ecosystem, this hardware platform integrate
 *   **Power Management:** Active voltage checks safeguarding the 2S LiPo system from dropping beneath unsafe cell margins.
 *   **Audio & Visuals:** Integrated 2P edison filament LED's with status animations alongside audio playback to make the robot scream.
 
-============================================================================================
+---
+
 ## Quick Navigation Hub
-============================================================================================
 
 To get started with assembling or programming the robot, navigate to the specific setup guides below:
 
@@ -31,9 +29,9 @@ To get started with assembling or programming the robot, navigate to the specifi
 *   **[Hardware Production & Assembly](./hardware/SETUP_GUIDE.md):** Access to print-ready `.3mf` files, raw SolidWorks CAD models, custom KiCad schematics, and factory-ready Gerber packages.
 *   **[Bill of Materials (BOM)](./hardware/BOM.md):** The complete physical and electrical component checklist required to buy, print, and manufacture the robot.
 
-============================================================================================
+---
+
 ## Project License
-============================================================================================
 
 This repository is distributed under a custom **Non-Commercial Open-Source License**. 
 
