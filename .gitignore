@@ -1,0 +1,7 @@
+**/.pio/
+**/.vscode/
+**/*.db*
+**/*.json
+!**/platformio.ini
+**/ipch/
+**/firmware/**/.gitignore

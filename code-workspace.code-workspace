@@ -1,0 +1,21 @@
+{
+    "folders": [
+        {
+            "name": "📂 Master Root Repo",
+            "path": "."
+        },
+        {
+            "name": "🤖 Robot Firmware",
+            "path": "firmware/robot_firmware"
+        },
+        {
+            "name": "🎮 Remote Firmware",
+            "path": "firmware/remote_firmware"
+        },
+        {
+            "name": "⚙️ Hardware Assets",
+            "path": "hardware"
+        }
+    ],
+    "settings": {}
+}
