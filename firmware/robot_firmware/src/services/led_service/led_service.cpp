@@ -1,3 +1,4 @@
+#include <config.h>
 #include "led_service.h"
 
 LedService::LedService(uint8_t ledPin)
@@ -47,7 +48,7 @@ void LedService::Update() {
             break; 
         }
         case LED_PULSING: {
-            float angle = (float)(now - _stateStartTime) * (3.14159f / 1000.0f);
+            float angle = (float)(now - _stateStartTime) * (3.14159f / PULSE_SPEED);
             uint8_t pulseBrightness = (uint8_t)((sin(angle) + 1.0f) * (MAX_BRIGHT / 2));
             WriteBrightness(pulseBrightness);
             break;
