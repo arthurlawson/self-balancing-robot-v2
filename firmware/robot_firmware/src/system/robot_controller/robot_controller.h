@@ -39,6 +39,8 @@ class RobotController {
         void SetState(RobotState state);
 
     private:
+        void Reset();
+
         ImuService& _imuSvc;
         LedService& _ledSvc;
         PowerService& _pwrSvc;
@@ -53,6 +55,5 @@ class RobotController {
         float _currentBrakingLean;
         bool _isDrivingInSameDir;
         float _speedLeakAccumulator;
-        int _lastDriveDir;
         bool _isBrakingLock;
 };

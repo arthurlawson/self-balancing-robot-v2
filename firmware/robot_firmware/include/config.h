@@ -86,7 +86,7 @@ static constexpr float KP = 30.0f;
 static constexpr float KI = 0.0f;
 
 // Derivative Gain
-static constexpr float KD = 0.05f;
+static constexpr float KD = 0.04f;
 
 // Minimum PWM to overcome static motor friction
 static constexpr float MIN_PWM = 30.0f;
@@ -97,13 +97,16 @@ static constexpr float MIN_PWM = 30.0f;
 // *** Adjust these values to change how the robot behaves when moving or turning
 
 // The driving lean angle
-static constexpr float MAX_DRIVE_LEAN_DEG = 2.0f;
+static constexpr float MAX_DRIVE_LEAN_DEG = 7.0f;
+
+// The speed at which the robot can instantly lean the other direction to brake
+static constexpr float SPEED_TO_CONSIDER_BRAKE = 0.12f;
 
 // Acceleration rate for speed transitions
-static constexpr float MOVEMENT_RAMP_RATE = 0.01f;
+static constexpr float MOVEMENT_RAMP_RATE = 0.004f;
 
 // Deceleration rate when shifting directions quickly
-static constexpr float BRAKING_RAMP_RATE = 0.15f;
+static constexpr float BRAKING_RAMP_RATE = 0.35f;
 
 // PWM offset injected to execute turns
 static constexpr float TURN_SPEED_OFFSET = 30.0f;
