@@ -1,5 +1,6 @@
 #include <config.h>
 #include "robot_controller.h"
+#include "utils/math_utils.h"
 
 RobotController::RobotController(ImuService& imuSvc, LedService& ledSvc, PowerService& pwrSvc, DRV8833& motors, PidController& pid, 
                                  KalmanFilter& kf, AudioDriver& speaker)

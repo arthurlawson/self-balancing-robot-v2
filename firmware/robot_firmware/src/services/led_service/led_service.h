@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <Arduino.h>
 #include "driver/ledc.h"
 
 class LedService {
@@ -30,8 +29,8 @@ class LedService {
         bool _blinkState;
         bool _bootComplete;
 
-        unsigned long _lastToggleTime;
-        unsigned long _stateStartTime;
+        uint32_t _lastToggleTime;
+        uint32_t _stateStartTime;
 
         // Hardware segregation - bound to channel 1 and timer 1
         static constexpr ledc_channel_t LED_CH = LEDC_CHANNEL_1;

@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <Arduino.h>
 #include "services/imu_service/imu_service.h"
 #include "services/led_service/led_service.h"
 #include "services/power_service/power_service.h"

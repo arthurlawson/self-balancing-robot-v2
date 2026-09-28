@@ -9,8 +9,6 @@
 
 #pragma once
 
-#include <Arduino.h>
-
 class KalmanFilter {
     public:
         KalmanFilter();
@@ -23,10 +21,10 @@ class KalmanFilter {
         bool _isInitialized;
 
         // Tuning Parameters matching the MPU6050 noise profiles
-        float SIGMA_INIT = 0.1f;        // Initial uncertainty guess
-        float Q_INIT = 0.000000125f;    // Process noise (Gyroscope trust)
-        float R_INIT = 0.0966f;         // Measurement noise (Accel trust)
-        float R_BIAS = 0.0000001f;      // Gyro bias noise
+        static constexpr float SIGMA_INIT = 0.1f;        // Initial uncertainty guess
+        static constexpr float Q_INIT = 0.000000125f;    // Process noise (Gyroscope trust)
+        static constexpr float R_INIT = 0.0966f;         // Measurement noise (Accel trust)
+        static constexpr float R_BIAS = 0.0000001f;      // Gyro bias noise
 
         // State Variables (estimated output angle and gyro bias)
         float _rollAngle;

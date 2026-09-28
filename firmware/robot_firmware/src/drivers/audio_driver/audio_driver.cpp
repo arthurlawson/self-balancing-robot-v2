@@ -1,6 +1,7 @@
 #include <config.h>
 #include "audio_driver.h"
 #include "driver/gpio.h"
+#include "utils/time_utils.h"
 
 void AudioPlaybackTask(void *pvParameters) {
     AudioDriver *driver = (AudioDriver *)pvParameters;
@@ -19,12 +20,12 @@ void AudioPlaybackTask(void *pvParameters) {
         audioFile.seek(44, SeekSet); 
     }
 
-    unsigned long startTime = millis();
+    uint32_t startTime = GetMillis();
 
     static constexpr size_t BUFFER_SIZE = 512;
     uint8_t ramBuffer[BUFFER_SIZE];
 
-    while (audioFile.available() && (millis() - startTime < MAX_PLAY_DURATION_MILLIS) && driver->_isPlaying) {
+    while (audioFile.available() && (GetMillis() - startTime < MAX_PLAY_DURATION_MILLIS) && driver->_isPlaying) {
         size_t bytesRead = audioFile.read(ramBuffer, BUFFER_SIZE);
 
         for (size_t i = 0; i < bytesRead; i++) {
@@ -46,7 +47,7 @@ void AudioPlaybackTask(void *pvParameters) {
     Serial.println("[CORE 0] Audio stream complete. Terminating thread.");
     
     driver->_isPlaying = false;
-    driver->_lastPlayTime = millis();
+    driver->_lastPlayTime = GetMillis();
     vTaskDelete(NULL); 
 }
 
@@ -113,7 +114,7 @@ uint8_t AudioDriver::CountAudioFiles() {
 
 void AudioDriver::PlayRandomAudio() {
     // Dont play if has already played something in the last 5 seconds / is still currently playing something
-    if (millis() - _lastPlayTime < MIN_BETWEEN_PLAYS_MILLIS || _isPlaying || _totalAudioFiles == 0) return;
+    if (GetMillis() - _lastPlayTime < MIN_BETWEEN_PLAYS_MILLIS || _isPlaying || _totalAudioFiles == 0) return;
 
     int randomFileIndex = random(0, _totalAudioFiles);
     snprintf(_currentTrackPath, sizeof(_currentTrackPath), "/audio%d.wav", randomFileIndex);
@@ -135,7 +136,7 @@ void AudioDriver::StopPlayback() {
     if (!_isPlaying) return;
 
     _isPlaying = false;
-    _lastPlayTime = millis();
+    _lastPlayTime = GetMillis();
 
     Serial.println("[AUDIO] Stop requested.");
 }

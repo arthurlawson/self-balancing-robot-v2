@@ -1,8 +1,5 @@
     #include <config.h>
-    #include <math.h>
     #include "kalman_filter.h"
-
-    static inline float Sqr(float x) { return x * x; }
 
     KalmanFilter::KalmanFilter() {
 

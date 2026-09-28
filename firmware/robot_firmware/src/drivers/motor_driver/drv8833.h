@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include <Arduino.h> 
 #include "driver/ledc.h"
 
 class DRV8833 {

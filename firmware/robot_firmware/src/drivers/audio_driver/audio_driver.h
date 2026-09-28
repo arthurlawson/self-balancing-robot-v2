@@ -10,7 +10,6 @@
 
 #pragma once
 
-#include <Arduino.h>
 #include "LittleFS.h"
 #include "driver/ledc.h"
 
@@ -34,7 +33,7 @@ class AudioDriver {
 
         char _currentTrackPath[32];
         volatile bool _isPlaying;
-        unsigned long _lastPlayTime;
+        uint32_t _lastPlayTime;
 
         uint8_t CountAudioFiles();
         void SmoothTurnOff();

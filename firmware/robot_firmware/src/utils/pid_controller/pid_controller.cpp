@@ -1,7 +1,6 @@
-#include <Arduino.h>
 #include <config.h>
-#include <math.h>
 #include "pid_controller.h"
+#include "utils/math_utils.h"
 
 PidController::PidController() {
 
@@ -26,11 +25,11 @@ float PidController::Compute(float pv, float maxOutput) {
     // Integral windup prevention
     _integral += _error * DELTA_T_SEC;
     float maxIntegralBound = 50.0f / (_ki > 0.0f ? _ki : 1.0f);
-    _integral = constrain(_integral, -maxIntegralBound, maxIntegralBound);
+    _integral = Clamp(_integral, maxIntegralBound);
 
     // Generate output
     _out = (_kp * _error) + (_ki * _integral) + (_kd * _derivative);
-    return constrain(_out, -maxOutput, maxOutput);
+    return Clamp(_out, maxOutput);
 }
     
 void PidController::SetKp(float kp) {

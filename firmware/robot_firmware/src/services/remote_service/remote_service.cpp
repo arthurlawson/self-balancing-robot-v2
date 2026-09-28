@@ -1,8 +1,9 @@
 #include "remote_service.h"
+#include "utils/time_utils.h"
 
 // Init of static members
 RobotController* RemoteService::_robot = nullptr;
-unsigned long RemoteService::_lastPacketTime = 0;
+uint32_t RemoteService::_lastPacketTime = 0;
 
 void RemoteService::Begin(RobotController& robot) {
     _robot = &robot;
@@ -19,12 +20,12 @@ void RemoteService::Begin(RobotController& robot) {
 
     // callback function that runs when the data arrives
     esp_now_register_recv_cb(OnDataReceived);
-    _lastPacketTime = millis();
+    _lastPacketTime = GetMillis();
 }
 
 void RemoteService::Update() {
     // Safety watchdog protection forces robot to idle state
-    if (millis() - _lastPacketTime > WATCHDOG_TIMOUT_MS) {
+    if (GetMillis() - _lastPacketTime > WATCHDOG_TIMOUT_MS) {
         if (_robot != nullptr) {
             _robot->SetState(RobotController::RobotState::IDLE);
         }
@@ -36,7 +37,7 @@ void RemoteService::OnDataReceived(const uint8_t* mac, const uint8_t* data, int 
     if (len != sizeof(packet)) return;
 
     memcpy(&packet, data, sizeof(ControlPacket));
-    _lastPacketTime = millis(); // refresh watchdog timer
+    _lastPacketTime = GetMillis(); // refresh watchdog timer
 
     if (_robot == nullptr) return;
 

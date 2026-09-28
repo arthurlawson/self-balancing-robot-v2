@@ -5,7 +5,6 @@
  * @author Arthur Lawson
  */
 
-#include <Arduino.h>
 #include <config.h>
 #include "utils/kalman_filter/kalman_filter.h"
 #include "utils/pid_controller/pid_controller.h"

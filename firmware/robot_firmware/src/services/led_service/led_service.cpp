@@ -1,11 +1,13 @@
 #include <config.h>
+#include <cmath>
 #include "led_service.h"
+#include "utils/time_utils.h"
 
 LedService::LedService(uint8_t ledPin)
     : _ledPin(ledPin), _curState(LED_BOOT_UP), _blinkState(false), _bootComplete(false), _lastToggleTime(0), _stateStartTime(0) {}
 
 void LedService::Begin() {
-    _stateStartTime = millis();
+    _stateStartTime = GetMillis();
     
     ledc_timer_config_t ledc_timer = {
         .speed_mode       = LEDC_LOW_SPEED_MODE,
@@ -29,7 +31,7 @@ void LedService::Begin() {
 }
 
 void LedService::Update() {
-    unsigned long now = millis();
+    uint32_t now = GetMillis();
 
     switch (_curState) {
         case LED_BOOT_UP: {
@@ -49,7 +51,7 @@ void LedService::Update() {
         }
         case LED_PULSING: {
             float angle = (float)(now - _stateStartTime) * (3.14159f / PULSE_SPEED);
-            uint8_t pulseBrightness = (uint8_t)((sin(angle) + 1.0f) * (MAX_BRIGHT / 2));
+            uint8_t pulseBrightness = (uint8_t)((std::sin(angle) + 1.0f) * (MAX_BRIGHT / 2));
             WriteBrightness(pulseBrightness);
             break;
         }
@@ -70,7 +72,7 @@ void LedService::SetState(LedState state) {
     if (_curState == state) return;
     _curState = state;
 
-    unsigned long now = millis();
+    uint32_t now = GetMillis();
     _stateStartTime = now;
 
     switch (state) {

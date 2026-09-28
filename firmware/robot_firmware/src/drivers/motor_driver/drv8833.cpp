@@ -1,4 +1,5 @@
 #include "drv8833.h"
+#include "utils/math_utils.h"
 
 DRV8833::DRV8833(uint8_t in1, uint8_t in2, uint8_t in3, uint8_t in4) 
     : _in1(in1), _in2(in2), _in3(in3), _in4(in4) {
@@ -29,7 +30,7 @@ DRV8833::DRV8833(uint8_t in1, uint8_t in2, uint8_t in3, uint8_t in4)
 
 void DRV8833::Drive(int16_t left, int16_t right) {
 
-    left = constrain(left, -255, 255);
+    left = Clamp(left, 255);
     if (left > 0) {
         SetPWM(IN1_CH, 255 - left);
         SetPWM(IN2_CH, 255);
@@ -41,7 +42,7 @@ void DRV8833::Drive(int16_t left, int16_t right) {
         SetPWM(IN2_CH, 255);
     }
 
-    right = constrain(right, -255, 255);
+    right = Clamp(right, 255);
     if (right > 0) {
         SetPWM(IN3_CH, 255);
         SetPWM(IN4_CH, 255 - right);

@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include <Arduino.h>
 #include "services/led_service/led_service.h"
+#include "driver/adc.h"
 
 class PowerService {
     public:
@@ -22,10 +22,12 @@ class PowerService {
         float _curVoltage;
 
         bool _isLowBatt;
-        unsigned long _sagTimerStartMs;
-        unsigned long _lastSampleTimeMs;
+        uint32_t _sagTimerStartMs;
+        uint32_t _lastSampleTimeMs;
+
+        adc1_channel_t _adc_channel;
 
         static constexpr uint16_t TIME_BETWEEN_CHECKS = 500;
-        static constexpr unsigned long SAG_CONFIRMATION_DUR = 1000;
+        static constexpr uint32_t SAG_CONFIRMATION_DUR = 1000;
         
 };

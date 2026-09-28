@@ -7,8 +7,6 @@
 
 #pragma once
 
-#include <Arduino.h>
-
 class PidController {
     public:
         PidController();

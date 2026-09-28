@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include <Arduino.h>
 #include <esp_now.h>
 #include <WiFi.h>
 #include <esp_wifi.h>
@@ -21,7 +20,7 @@ private:
     static void OnDataReceived(const uint8_t* mac, const uint8_t* data, int len);
 
     static RobotController* _robot;
-    static unsigned long _lastPacketTime;
-    static const unsigned long WATCHDOG_TIMOUT_MS = 100; // 0.1s
+    static uint32_t _lastPacketTime;
+    static const uint32_t WATCHDOG_TIMOUT_MS = 100; // 0.1s
     
 };
