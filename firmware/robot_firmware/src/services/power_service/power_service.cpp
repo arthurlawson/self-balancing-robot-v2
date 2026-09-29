@@ -15,8 +15,8 @@ void PowerService::Begin() {
     // Initialize the width of ADC Unit 1 to 12-bit (0-4095)
     adc1_config_width(ADC_WIDTH_BIT_12);
 
-    // 11dB attenuation to read full ranges without clipping
-    adc1_config_channel_atten(_adc_channel, ADC_ATTEN_DB_11);
+    // 12dB attenuation to read full ranges without clipping
+    adc1_config_channel_atten(_adc_channel, ADC_ATTEN_DB_12);
 }
 
 bool PowerService::IsBatteryLow() {
